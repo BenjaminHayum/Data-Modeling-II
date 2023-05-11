@@ -1,0 +1,144 @@
+
+---
+title: "STAT340 HW10: Prediction III, logistic regression"
+author: "Ben Hayum"
+date: "November 2022"
+output: html_document
+---
+
+***
+
+No other students.
+
+***
+
+## Instructions
+
+Update the "author" and "date" fields in the header and
+complete the exercises below.
+Knit the document, and submit **both the HTML and RMD** files to Canvas.
+
+__Due date:__ December 1, 2022 at 11:59pm.
+
+---
+
+This homework will review our discussion of logistic regression from this week's lectures.
+
+## 1) Interpreting logistic regression
+
+Suppose we collect data for a group of students in a statistics class with independent variables $X_{1}=\text{hours studied}$, $X_{2}=\text{GPA}$, and binary response variable
+$$
+Y= \begin{cases} 1 &\mbox{ if student received an A} \\
+  0 &\mbox{ otherwise. }
+  \end{cases}
+$$
+Suppose that we fit a logistic regression model to the data, predicting $Y$ from $X_1$ and $X_2$ (and an intercept term) and produce estimated coefficients $\hat{\beta}_{0}=-6, \hat{\beta}_{1}=0.05, \hat{\beta}_{2}=1$.
+
+### Part a) Logistic regression and probability
+
+According to our fitted model, what is the probability that a student receives an A if they study for $40$ hours and have a GPA of $3.5$?
+
+```{r}
+log_odds = -6 + .05*40 + 1*3.5
+odds = exp(log_odds)
+odds
+```
+
+### Part b) Interpreting coefficients
+According to our fitted model, an additional hour spent studying is associated with *how much* of an increase in the log odds of receiving an A?
+
+***
+
+An additional hour spent studying is associated with an increase in .05 of the log odds of receiving an A
+
+***
+
+### Part c) "Inverting" logistic regression probabilities
+According to our fitted model, how many hours would the student in Part (a) need to study to have a $50\%$ chance of getting an A in the class?
+That is, keeping GPA fixed at $3.5$, how many hours of study are needed so that the probability of an A is $50\%$?
+If you aren't up for the math, feel free to find an approximate solution via guess-and-check in R.
+
+***
+
+Shown below is how I solve for the amount of hours needed to study so that the probability of an A is .5 given that the GPA is fixed at 3.5. The answer ends up being 36.13706 hours.
+
+***
+
+```{r}
+# .5 = e^(-6 + .05*hours + 1*3.5)
+# ln(.5) = -6 + .05*hours + 1*3.5
+# ln(.5) + 2.5 = .05*hours
+# (ln(.5) + 2.5)/.05 = hours
+hours = (log(.5) + 2.5)/.05
+hours
+
+# Checking that it works
+odds = exp(-6 + hours*.05 + 3.5)
+odds
+```
+
+## 2) `mtcars` once again
+
+Let's take yet another look at the `mtcars` data set.
+Recall that the columns of this data set are:
+```{r}
+names(mtcars)
+```
+
+The `am` column encodes whether a car is automatic (`0`) or manual (`1`).
+Let's build a model to predict whether a car is manual or automatic.
+
+### Part a) Fitting a model
+
+Fit a logistic regression model to regress `am` against the `drat` and `disp` (and an intercept term).
+
+```{r}
+model = glm(am ~ 1 + drat + disp, data = mtcars, family = "binomial")
+summary(model)
+```
+
+### Part b) Interpreting estimates
+
+Which coefficients (if any) are statistically significantly different from zero at the $\alpha=0.05$ level?
+Interpret the meaning of the estimated coefficient(s) that is/are statistically significantly different from zero.
+
+***
+
+The only coefficient that is statistically significant at the alpha = .05 level is drat, the rear axle ratio, which has a value of 4.879396
+
+This means that 4.879396 is the increase in the log odds of the car being automatic that is associated with a unit increase in drat, the rear axle ratio
+
+***
+
+### Part c) paring down the model
+
+Choose one of the statistically significant predictors above and re-fit a model using *only* that variable (and an intercept) to predict `am`.
+We'll see how to compare the quality of this model to the one from Part (a) when we talk about cross-validation (CV) in upcoming lectures.
+For now, compare the estimated coefficient of this variable in both models.
+Is there a sizable difference?
+
+Does anything else notable change about the model?
+
+```{r}
+model2 = glm(am ~ 1 + drat, data = mtcars, family = "binomial")
+summary(model2)
+```
+***
+
+Beta_0/the intercept also becomes statistically significant when using drat as the only predictor, and Beta_1 becomes even more significant than it previously was 
+
+***
+
+### Part d) Plotting your findings
+
+Choose one of the statistically significant predictors above.
+Use `ggplot2` to plot `am` as a function of this predictor, and overlay a curve describing the logistic regression output when using *only* this predictor to predict `am` (i.e., the model from Part c above).
+
+```{r}
+# Using the intercept predictor as well here it seems like...
+
+library(ggplot2)
+ggplot(data = mtcars, aes(x = drat, y = am)) + 
+  geom_point() + 
+  geom_smooth(formula='y ~ 1+x', method='glm', method.args=list(family = "binomial"), se = FALSE)
+```

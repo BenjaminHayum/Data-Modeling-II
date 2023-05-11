@@ -1,0 +1,239 @@
+
+---
+title:  "STAT340: Discussion 9: linear regression, continued"
+output: html_document
+---
+
+## XKCD comic
+
+<center><a href="https://xkcd.com/1725/"><img id="comic" src="https://imgs.xkcd.com/comics/linear_regression.png"></a></center>
+
+---
+
+Today, we'll continue our discussion of linear regression with a pair of exercises.
+The first will illustrate how including nonlinearities in our model can improve prediction
+The second will give you some practice with 
+
+## Part 1) Nonlinearity and the `cars` Data Set
+
+The `cars` data set (note: this is distinct from the `mtcars` data set!) contains data on stopping distances for cars driving at different speeds.
+```{r}
+data(cars)
+head(cars)
+```
+
+As you can see, the data set has just two columns: `speed` and `dist`, corresponding to speed (in miles per hour) and stopping distance (in feet), respectively.
+Note that this data was gathered in the 1920s. Modern cars can go a lot faster and stop far more effectively!
+
+__Part a: plotting the data__
+
+Create a scatter plot of the data, showing stopping distance as a function of speed (i.e., distance on the y-axis and speed on the x-axis).
+Do you notice a trend?
+If so, does it appear at least vaguely linear? Discuss (a sentence or two is plenty).
+
+```{r}
+
+#TODO: code goes here.
+
+```
+
+***
+
+TODO: discuss here.
+
+***
+
+__Part b: fitting linear regression__
+
+Use `lm` to fit a linear regression model that predicts stopping distance from speed (and an intercept term).
+That is, fit a model like `dist = beta0 + beta1*speed`.
+
+```{r}
+
+#TODO: code goes here.
+
+```
+
+Use the resulting slope and intercept terms to create the scatter plot from Part a, but this time add a line, __in blue__, indicating our fitted model (i.e., add a line with slope and intercept given by your estimated coefficients).
+
+```{r}
+
+# TODO: code goes here.
+
+```
+
+Do you notice anything about your model?
+Is the model a good fit for the data?
+Why or why not?
+Try looking at the residuals (using both the residuals plot and the Q-Q plot).
+Do you notice anything concerning?
+Two or three sentences is plenty here.
+
+```{r}
+
+#TODO: code goes here.
+
+```
+
+***
+
+TODO: discussion goes here.
+
+***
+
+Examine the output produced by `lm`.
+Interpret the coefficient of `speed`-- what can we conclude from it?
+Should we or should we not reject the null hypothesis that the `speed` variable has a non-zero coefficient?
+
+```{r}
+summary(carlm)
+```
+
+***
+
+TODO: discussion goes here.
+
+***
+
+__Part c: accounting for nonlinearity__
+
+Let's see if we can improve our model.
+We know from physics class that kinetic energy grows like the square of the speed.
+Since stopping amounts to getting rid of kinetic energy, it stands to reason that stopping distance might be better predicted by the square of the speed, rather than the speed itself.
+It's not exactly clear in the data that such a trend exists, but let's try fitting a different model and see what happens.
+
+Fit the model `dist = beta0 + beta1*speed^2` to the `cars` data.
+
+```{r}
+
+# TODO: code goes here.
+
+```
+
+Plot stopping distance as a function of speed again and again add the regression line __in blue__ from Part c.
+Then add another line (a curve, really, I guess), __in red__, indicating the prediction of this new model.
+That is, the predicted distance as a linear function of *squared* speed.
+
+__Hint:__ the speed values in the data range from 4 to 25. You may find it useful to create a vector `x` containing a sequence of appropriately-spaced points from 4 to 25 and evaluate your model at those `x` values.
+
+__Another hint:__ this is the rare problem where it's probably actually easier to use `ggplot2`, but if you prefer to do everything in R, don't forget about the `lines` function, which might be helpful here.
+
+```{r}
+
+# TODO: code goes here.
+
+```
+
+__Part d: which is better?__
+
+Compare the linear and quadratic models fitted above.
+Which one describes the data better?
+What do you base that claim on?
+__Hint:__ consider comparing things like RSE, $R^2$ and comparing the residuals.
+A couple of sentences is plenty.
+
+```{r}
+
+#TODO: code goes here.
+
+```
+
+***
+
+Comparing the RSE of these two models, the non-linear model achieves an ever so slightly better reconstruction of the responses.
+The residuals in the quadratic model display far more homoscedasticity than the linear model.
+
+***
+
+## Multiple regression: a preview of feature selection
+
+Let's return yet again to the `mtcars` data set that we've discussed in lecture.
+Recall that the columns of this data set are
+```{r}
+names(mtcars)
+```
+
+Suppose that our goal is to predict the miles per gallon (`mpg`) of cars using the other predictors.
+This exercise will get you some practice working with simple and multiple linear regression, and will preview some ideas that we will revisit in a few weeks when we discuss model selection.
+
+### Part a) comparing predictors
+
+Pick three of those predictors.
+For each one, fit a model of the form `y ~ 1 + x`.
+That is, for each of your predictors, fit a simple linear regression model that predicts `mpg` from *just* that predictor (and an intercept term).
+
+Look at the RSE for each of these three models.
+Which one fits the data best?
+
+```{r}
+
+#TODO: code goes here for model 1
+
+```
+
+```{r}
+
+#TODO: code goes here for model 2
+
+```
+
+```{r}
+
+#TODO: code goes here for model 3
+
+```
+
+ ***
+ 
+TODO: brief discussion goes here.
+ 
+ ***
+
+### Part b) Combining features
+
+Now, from your three predictors in part (a) above, consider the three possible ways of choosing two of these three predictors.
+For each such pair, fit a multiple-regression model that predicts `mpg` using those two predictors.
+Then, compare the RSEs of those three models.
+Which does best?
+Does the best model include the predictor that did best in Part (a)?
+Are both predictors significant in all three models?
+
+```{r}
+
+#TODO: code goes here for model 1
+
+```
+
+```{r}
+
+#TODO: code goes here for model 2
+
+```
+
+```{r}
+
+#TODO: code goes here for model 3
+
+```
+
+### Part c) Looking ahead
+
+Now, compare the performance of your two-predictor models in part (b) to the performance of your models in part (c).
+Unless something really weird happened, you should see that the two-predictor models outperform the single-variable models as measured by things like RSE and $R^2$.
+
+So we can trivially improve our model's accuracy by adding more predictors-- after all, more predictors will give our model more information to work with (indeed, we can make this far more precise with linear algebra, but that's for another class)!
+Verify this fact by fitting a multiple regression model on all three predictors in your models from Parts (a) and (b).
+Compare its RSE and $R^2$ to those of the models in Part (b).
+You should see that this three-predictor model improves upon all three models in Part (b).
+
+```{r}
+
+#TODO: code goes here.
+
+```
+
+So adding more predictors will always improve our model.
+On the other hand, it doesn't seem quite fair-- adding more predictors to our model will *always* improve the reconstruction accuracy of our model (again, as measured by RSE or $R^2$, etc).
+Should we prefer a model with one predictor over a model with two predictors that has only slightly better prediction accuracy?
+How do we know when to stop adding predictors?
+That's the problem of *feature selection*, which we'll come back to in a few weeks.

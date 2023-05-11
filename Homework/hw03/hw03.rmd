@@ -1,0 +1,215 @@
+
+---
+title: "STAT340 HW03: Testing I"
+author: "Ben Hayum"
+date: "October 4th, 2022"
+output: html_document
+---
+
+***
+
+Worked with no other students.
+
+***
+
+## Instructions
+
+Update the "author" and "date" fields in the header and
+complete the exercises below.
+Knit the document, and submit **both the HTML and RMD** files to Canvas.
+
+__Due date:__ October 6, 2022 at 11:59pm.
+
+---
+
+## 1) Permutation testing
+
+Below are data arising from a (fictionalized) data source: the number of defects per day on an assembly line before (`before`) and after (`after`) installation of a new torque converter (this is a totally fictional "part" of an assembly line-- just treat these as "control" and "treatment" groups, respectively).
+
+```{r}
+before <- c(2, 3, 8, 3, 4, 5, 6, 3, 5, 5, 2, 4, 3, 5, 4, 1, 3, 5, 8, 4, 4, 2, 2, 4, 6, 3, 4, 3, 4, 6, 5, 4, 5, 4, 6, 6, 3, 7, 0, 6);
+after <- c(1, 4, 2, 3, 6, 2, 5, 7, 3, 5, 3, 2, 6, 5, 3, 2, 6, 4, 4, 3, 4, 5, 2, 7, 2, 2, 8, 2, 7, 5 );
+```
+
+a) Use a permutation test to assess the claim that installation of the new part changed the prevalence of defects.
+That is, test the null hypothesis that the distribution of defects is the same before and after installation of the new part.
+
+__Hint:__ be careful of the fact that these two different groups have different sizes!
+
+__Note:__ You do not *have* to produce a p-value, here, though that would be a very reasonable thing to do!
+
+```{r}
+xbar_before = mean(before)
+xbar_after = mean(after)
+og_test_stat = xbar_after - xbar_before
+
+permute_and_get_null_test_stat = function(before, after) {
+  pooled_data = c(before, after)
+  n_before = length(before)
+  n_after = length(after)
+
+  shuffled_data = sample(pooled_data, size=(n_before+n_after), replace=FALSE)
+  shuffled_before = shuffled_data[1:n_before]
+  shuffled_after = shuffled_data[(n_before+1):(n_before+n_after)]
+  
+  return(mean(shuffled_after) - mean(shuffled_before))
+}
+
+NMC = 10000
+null_test_stats = rep(0, NMC)
+for (i in 1:NMC) {
+  null_test_stats[i] = permute_and_get_null_test_stat(before, after)
+}
+
+sum(null_test_stats >= og_test_stat)/NMC
+```
+
+b) Explain, briefly, what you did above and why. Imagine that you are trying to explain to someone who isn't your statistics professor what exactly you are doing in a permutation test. Explain your conclusion based on your test above.
+Three to five sentences should be plenty, but you are free to write as much or as little as you think is necessary to clearly explain your findings.
+
+***
+
+We find the original true test statistic given the before and after groups to use later on.
+
+We permute the dataset many times to simulate the null hypothesis where the two distributions are equal. This means that we pool all the data together and randomly shuffle it into groups of the same size as the original before and after groups. We then compute the test statistic that this simulated null distribution gives us. Given the many null test statistics computed and the original true test statistic, we can see how many of the null test statistics lie at or more extreme to the original true test statistic to see what the odds approximately are of getting this original true test statistic if the null distribution were true.
+
+Here, that probability was calculated to be about .67 which means that 67% of the null test statistics were at or more extreme to the original true test statistic. This means that the original true test statistic would not be a very rare occurance if the null hypothesis were true and the two distributions were equal. Therefore, there is not sufficient evidence to conclude that the two distributions are different.
+
+***
+
+## 2) Extrasensory perception?
+
+There has been a great deal of effort over the years to prove the existence or non-existence of [extra-sensory perception (ESP)](https://en.wikipedia.org/wiki/Extrasensory_perception).
+
+Sam claims to have ESP, and offers to demonstrate it via the following experiment: we will start with a standard deck of playing cards.
+We will shuffle the deck and look at the cards, one at a time, in order, not showing Sam the card.
+As we look at each card, Sam will guess the card (both the rank and the suit), and we will record whether or not Sam has guessed correctly.
+We *will not* tell Sam if the guess was correct, simply record whether or not it was correct without giving feedback.
+
+__Note:__ A standard deck of playing cards consists of 52 cards, 4 suits, 13 ranks; each card has a suit and a rank, with each rank-suit combination appearing exactly once. Note that as a result, each of the 52 cards in the deck is unique. See [here](https://en.wikipedia.org/wiki/Standard_52-card_deck) for additional background and information.
+
+Suppose that we conduct this experiment and we find that Sam correctly guesses four (4) of the 52 cards correctly.
+Use the techniques and ideas introduced so far this semester to assess how likely or unlikely this outcome (or the outcome in which Sam gets even more cards correct) is under the null hypothesis that Sam guesses each of the 52 cards exactly once each, in a random order.
+That is, we are assuming that Sam is guessing by randomly choosing an ordering of the cards in the deck and guessing in that order.
+
+In addition to code, please include a detailed explanation of your thought process, including motivating and/or clarifying your modeling choices.
+Think carefully about how to model a randomly shuffled deck of cards-- thinking back to our birthday example from last week might prove helpful.
+
+Your response will be graded both on its correctness (though note that there is no single strictly correct answer, here) and on the clarity of your explanation.
+Try writing as though you were explaining your choices to a student who has already taken this course previously.
+
+***
+
+```{r}
+guess_through_deck = function() {
+  shuffled_deck = sample(x = 52, size=52, replace=FALSE)
+  shuffled_guesses = sample(x = 52, size=52, replace=FALSE)
+  
+  guess_check = shuffled_deck-shuffled_guesses
+  correct_guess_counter = 0 
+  for (i in 1:length(guess_check)) {
+    if (guess_check[i] == 0) {
+      correct_guess_counter = correct_guess_counter + 1
+    }
+  }
+
+  return(correct_guess_counter)
+}
+
+actual_correct_guesses = 4
+NMC = 10000
+null_correct_guesses = rep(0, NMC)
+for (i in 1:NMC) {
+  null_correct_guesses[i] = guess_through_deck()
+}
+
+sum(null_correct_guesses >= actual_correct_guesses)/NMC
+```
+
+To model this situation, I created a shuffled deck by randomly sampling from 52 without replacement as well as simulated guesses by doing the same thing. In real life, the guesser may repeat a guess of the same suit and number by accident -- which here would mean having replacement set to TRUE for "shuffled_guesses". However, in my model I decided to give the simulated guesser the benefit of the doubt and make it so that they guessed a different card every time.
+
+After simulating the deck and guesses, I subtracted the values from each other. In the resulting array, only the entries with a value of 0 will have been correct guesses. This is because 0s can only result from when the two values subtracted from each other were the exact same. I then iterated through the guess checks and counted the number of correct ones. I then returned this count.
+
+I ran the above simulation 10000 times and stored the resulting null hypothesis's simulated correct guesses in an array. I then wrote code to count the number of simulated correct guesses that were greater than or equal to the actual correct guesses and divided this by the total number of Monte Carlo simulations. This ended up resulting in an approximated p-value of around .019. This means that of the simulated correct guesses, only 1.9% of the values were greater than or equal to the 4 correct guesses that Sam got. Therefore, we have pretty strong evidence against the fact that Sam was just guessing randomly at the cards. Perhaps Sam does have ESP!
+
+***
+
+## 3) Just lucky?
+
+The [National Football League (NFL)](https://en.wikipedia.org/wiki/National_Football_League) is the top league in American football.
+The league consists of two conferences, the American Football Conference (AFC) and the National Football Conference (NFC).
+Since 1967, the top team from each of these conferences play against one another in the [Superbowl](https://en.wikipedia.org/wiki/Super_Bowl).
+
+a) As of writing this homework, there have been fifty six (56) Superbowls played.
+The NFC team has won 29 of these 56 games.
+Using everything you have learned so far this semester, assess whether or not this constitutes a "surprising" amount of games.
+Please include a clear explanation of your thought process and how you arrived at your conclusion.
+As is often the case in these homeworks, there is no strictly right or wrong answer, here, so long as your reasoning is sound and your explanation is clearly written. 
+
+***
+
+I ran 10000 simulations on the number of NFC wins in the scenario of the null hypothesis where it was equally likely for the NFC or AFC to win the superbowl. This was done by 56 times randomly selecting between 0 or 1 and then summing the number of 1s.
+
+I then wrote code to count how many of these null simulated win counts were at or beyond the actual number of NFC wins of 29 and divided this number by the total number of Monte Carlo simulations. This ended up resulting in an approximated p-value of .44. This result means that 44% of the simulated  win counts were at or beyond the actual win count. Therefore the actual win count of 29 doesn't seem like that rare of an occurrence and is not surprising.
+
+***
+
+```{r}
+win_test_stat = 29
+NMC = 10000
+null_test_stats = rep(0, NMC)
+for (i in 1:NMC) {
+  null_test_stats[i] = sum(sample(x = 0:1, size=56, replace=TRUE))
+}
+
+sum(null_test_stats >= win_test_stat)/NMC
+```
+
+b) Among those 29 wins by NFC teams, the NFC team won the Superbowl every year from 1985 to 1997 (13 consecutive Superbowls; coincidentally, the last of these was a victory by Wisconsin's own Green Bay Packers over my hometown team the New England Patriots)
+Under the assumption that each year's Superbowl is independent of the others and that the AFC and NFC teams are equally likely to win any given Superbowl, assess how surprising this result is.
+That is, associate a p-value to the event that the NFC team won all 13 Superbowls in the span 1985 to 1997.
+Once again, clearly explain your reasoning to get full credit.
+
+***
+
+I did 100,000 Monte Carlo simulations and in each of them checked if 13 coin flips in a row were all heads to simulate the chances of 13 wins in a row given equal odds of winning vs losing. For every one that had 13 straight, I put a value of 1 into an array tracking them. If they did not win 13 straight in a certain simulation, the array entry had a value of 0.
+
+I then summed across the array to count the number of 13 win straight simulations and divided this by the number of monte carlo simulations to calculate the proportion of 13 straight win runs out of all the sets of 13 superbowl simulations. This resulted in an approximated p-value ended up of around .0001. This result means that in .01% of the simulated series of 13 superbowls where it was equally likely for the NFC and AFC to win did the NFC win all of them straight. It therefore is very unusual that the NFC won all 13 superbowls in the span 1985 to 1997 and provides evidence against the fact that there were equal odds of the NFC or AFC winning in each year. The reason for this is likely because the NFC had better top tier teams than the AFC.
+
+
+***
+
+```{r}
+NMC = 100000
+win_straight_check = rep(0, NMC)
+for (i in 1:NMC) {
+  if (sum(sample(x = 0:1, size=13, replace=TRUE)) == 13) {
+    win_straight_check[i] = 1
+  }
+}
+
+sum(win_straight_check)/NMC
+```
+
+c) __Bonus:__ (not worth any points; just a fun exercise) Now, let's zoom out. Write a simulation to estimate how often, under our "independent coinflips" model of the Superbowl, it happens that either of the two conferences (AFC or NFC) wins at least 13 consecutive games.
+__Hint:__ you may find the following function useful, which takes a vector of `0`s and `1`s (e.g., a sequence of Bernoulli RVs) and outputs the length of the longest run.
+
+```{r}
+longestRun = function(x){
+    return( max( 0, with(rle(x), lengths) ) )
+}
+
+# Example: here's a vector encoding the Superbowl history.
+# 0s are AFC, 1s are NFC.
+superbowls <- c( 1,1,0,0,0,1,0,0,0,0,0,1,0,0,0,
+                 1,1,0,1,1,1,1,1,1,1,1,1,1,1,1,
+                 1,0,0,1,0,0,1,0,0,0,0,1,0,1,1,
+                 1,0,1,0,0,0,1,0,0,1,1)
+longestRun(superbowls)
+```
+
+
+```{r}
+# TODO: code goes here,
+# if you choose to do this OPTIONAL, NOT WORTH ANY POINTS bonus problem
+```

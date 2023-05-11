@@ -1,0 +1,487 @@
+---
+title: "Stat 340 Final Review"
+output:
+  html_document:
+    df_print: paged
+editor_options:
+  chunk_output_type: inline
+---
+
+IF X and Y ARE PAIRED, BE CAREFUL WHEN SAMPLE THEM TO KEEP THEM TOGETHER!!
+```{r}
+n = 32
+# Get the paired indices
+resample_indices <- sample( 1:n, n, replace=TRUE )
+# Pull them out of the data
+resampled_data <- mtcars[resample_indices,];
+```
+
+# Simple Linear Regression
+
+### Introduction
+- x values are the predictors/independent variables
+- y values are the responses/dependent variables
+- Yi=β0+β1Xi+ϵi
+-     ϵi∼N(0,σ^2) 
+
+- We want to choose β0 and β1 so that this model describes our observed data as well as possible.
+- We ASSUME that the data is linear but we don't really know
+
+- β0 is the predicted value of y when x has a value of 0
+- β1 is the change in y associated with a unit change in x
+-     It is just ASSOCIATED -- the unit change in x DOES NOT CAUSE the change in y
+- Std. Error of β0 Interpretation -- When x has a value of 0, the associated values of y have a variance of Std. Error
+- Std. Error of β1 Interpretation -- A unit increase in the number of X in an automobile is associated with a change in Y that has a variance of Std. Error
+
+- Be careful of extrapolating to points that are outside of the range of the data
+
+- Choosing a loss to minimize for Linear Regression
+- RSS -- Residual Sum of Squares (aka SSE -- Sum of Squared Errors)
+-     The sum of all the squared residuals
+-     When we minimize this, we do ordinary linear regression
+- We could choose another loss like the sum of the absolute values of the residuals
+
+- Given this, equations to calculate the slope and standard deviations are in https://pages.stat.wisc.edu/~kdlevin/teaching/Fall2022/STAT340/lecs/L08_prediction.html
+
+### Example
+Regressing the amount of aggravated assault by the amount of lead in the atmosphere
+```{r}
+lead <- read.csv('lead.csv')
+atlanta_lead <- lead[ lead$city=='Atlanta', ]
+```
+```{r}
+atlanta_lead_lm <- lm(aggr.assault.per.million ~ 1 + air.pb.metric.tons, data=atlanta_lead)
+summary(atlanta_lead_lm)
+```
+ - Estimates are the Betas
+ - Std Errors are the variances of the associated values of y
+ - Pr(>|t|) is the p-value of the betas
+ 
+ - Residual Standard Error -- 
+ - Multiple R-Squared -- 
+ - Adjusted R-Squared -- 
+ - F-statistic -- 
+ 
+Plotting above
+```{r}
+library(ggplot2)
+pp <- ggplot(atlanta_lead, aes(x=air.pb.metric.tons,y=aggr.assault.per.million));
+# Adding the linear model's plots to the graph
+pp <- pp +geom_point() + geom_smooth(method="lm", formula="y~x", se=FALSE);
+pp <- pp + labs( x="Lead levels (metric tons)", y="Agg'd assaults (per million)", title="Violent crime and atmospheric lead (22 year lag)" )
+pp 
+```
+
+Getting values out of the model
+```{r}
+# Returns the Betas of the model
+atlanta_lead_lm$coefficients
+
+# Gets fitted y-values (i.e., points on line of best fit)
+fitted(atlanta_lead_lm)
+
+# Gets residuals (the difference between the observed response y and the response predicted by our model)
+residuals(atlanta_lead_lm)  # We can also use resid()
+```
+
+Our Model assumes that the observation errors ϵi are normally distributed about zero, with a shared variance σ2. To check that this assumption is (approximately) true, we can plot the residuals:
+```{r}
+hist(residuals(atlanta_lead_lm))
+```
+A Q-Q Plot checks for the normality of the residuals better than this plot:
+- Q-Q Plot displays the quantiles of our residuals against the quantiles of the standard normal distribution
+```{r}
+plot(atlanta_lead_lm, which=2)
+```
+
+- Another more important assumption is -- homoscedasticity -- the variance of the errors ϵi does not depend on the predictor
+- If this is the case, then on a plot of residuals vs x or vs y, there should be no notable trend
+```{r}
+plot(atlanta_lead_lm, which=1)
+```
+
+Confidence intervals for the betas of linear models
+```{r}
+confint(atlanta_lead_lm, level=0.95)
+```
+
+To predict new values given the model:
+```{r}
+predict(atlanta_lead_lm, newdata=data.frame(air.pb.metric.tons=1300))
+```
+
+# Multiple Linear Regression
+
+### Introduction
+- Now specifying multiple predictors 1, ..., p for data points 1, ..., i:
+- Yi=β0 + β1Xi,1 + β2Xi,2 + ⋯ + βp−1Xi,p−1 + βpXi,p + ϵi,
+
+- Using a matrix-vector equation, you can do y=Xβ with y and β as vectors and X as a matrix
+
+- It is now hard to check for homoscedasticity, but we can still look for normally distributed residuals with a Q-Q Plot
+### Example
+```{r}
+mtc_model <- lm( qsec ~ 1 + disp + hp + wt, data=mtcars);
+summary(mtc_model)
+```
+- Interpretation of each of the Betas now:
+-     Controlling for hp and disp, a unit increase of wt is associated with an increase of 1.5 in qsec
+
+```{r}
+plot(mtc_model, which=2)
+```
+### Model Error Types
+
+Models with more data points are going ot have higher RSSs, so we can normalize by dividing by the degrees of freedom with df = n−(p+1)
+- More data points = divide by more and have a lesser normalized RSS
+- More parameters = divide by less and have a greater normalized RSS -- penalize for adding extra predictors to the model
+Then, taking the squared root of this value gets you the Residual Standard Error (RSE) which you can find in the model summary description
+- This is the variance of the data itself from the prediction line.
+
+Total Sum of Squares (TSS) is the sum of the squared distances from the mean -- not at all based on the model's predictions. We can think of the difference as:
+- RSS as being the amount of variation in the data not captured by our model
+- TSS as being the amount of variation in the data (once we get rid of the structure explained by the “dumbest” model)
+- Then, 1−RSS/TSS is the proportion of the variation that is explained by our model.
+
+Model Sum of Squares (MSS, aka ESS explained sum or squares) is the sum of the squared distances of the prediction from the mean. With this definition:
+- TSS = RSS + MSS
+- R^2 = (TSS - RSS)/TSS = MSS/TSS
+We can interpret R^2 as measuring the proportion (between 0 and 1) of the variation in the responses (TSS) that is explained by our model.
+- The adjusted R^2 statistic is the same thing but penalizes for having extra predictor variables
+- 
+
+We can use the F statistic to see whether our model has any explanatory power.
+- F statistics follow a distribution that fits something like (MSS/p) / (RSS/(n−p−1))
+- A significant F statistic means that our model fit is much better than would be expected by chance
+- Said another way, we can be fairly confident that our model has captured a trend present in our data.
+
+### Categorical Predictors
+You can just call lm in the regular format
+```{r}
+mtc_bin <- lm( qsec ~ 1 + am + vs, data=mtcars );
+summary(mtc_bin)
+```
+
+To plot, use as.factor() for the categorical variables
+```{r}
+pp <- ggplot(mtcars, aes( x=as.factor(vs), y=qsec, color=as.factor(am), fill=as.factor(am))) + geom_point();
+pp
+```
+
+### Interactions between variables
+Include interaction factors in linear models with "X1:X2"
+
+Look at https://pages.stat.wisc.edu/~kdlevin/teaching/Fall2022/STAT340/lecs/L09_multiple.html to see what the equation for the linear model with interaction factors looks like
+```{r}
+frost <- read.csv('frost_example.csv')
+pp <- ggplot(frost, aes(x=Food, y=Enjoyment, color=Condiment, fill=Condiment));
+pp <- pp + geom_point()
+pp
+```
+
+```{r}
+enjoy_interaction <- lm(Enjoyment ~ 1 + Food + Condiment + Food:Condiment, data=frost)
+summary(enjoy_interaction)
+```
+*Understanding categorical variables and interactions:*
+When interaction isn't included...
+- Estimate of categorical variable is the difference in the intercept (of two parallel lines with a slope equal to Bwt's estimate) when it is Male vs Female.
+When interaction is included...
+- The lines are no longer parallel across the two categories and the slope is changed
+- For example, looking at above, the slope for the blue points is very clearly different than the slope for the pink points
+
+*Interpretting categorical variables and interactions:*
+- Categorical Variable -- A change in sex of male vs female is associated with a change in heart weight of 24.15
+- Interaction -- A unit increase in body weight of 1 kg is be associated with in increase in heart weight that differs by 1.6763 grams across the cases where sex is male vs female
+ 
+### Non-Linear Model Fits
+Use I() around the variable name and the power that you raise it to or log you use or whatever
+```{r}
+mtc_lm <- lm( mpg ~ 1 + hp + I(hp^2), data=mtcars );
+summary(mtc_lm)
+```
+
+```{r}
+pp <- ggplot(mtcars, aes(x=hp, y=mpg) ) + geom_point() + geom_smooth(method='lm', formula='y~1+x + I(x^2)', se=FALSE );
+pp
+```
+
+# Logistic Regression
+We do logistic regression by taking our linear prediction ŷ =β̂ 0+β̂ 1x and turning it into a probability, i.e., a number between 0 and 1. We do that using the logistic function
+- σ(z)= 1/(1+e^−z) = e^z/(1+e^z) -- But with the betas and x values in the place of z
+- We predict that y is 1 if the function returns above .5 and predict that y is 0 if the function returns below .5
+
+To fit a logistic regression, use glm(), and specify the family parameter to be "binomial" for the 0 or 1
+
+```{r}
+library(MASS)
+Pima.te$diabetes <- ifelse( Pima.te$type=='Yes', 1, 0)
+pp <- ggplot(data=Pima.te, aes(x=glu, y=diabetes)) + geom_point()
+pp <- pp + geom_smooth(method='lm', se=FALSE, formula='y ~ 1 + x')
+pp
+```
+Instead of doing linear regression we can instead then do logistic:
+```{r}
+pima_logistic <- glm( diabetes ~ 1 + glu, data=Pima.te, family="binomial");
+summary(pima_logistic)
+```
+With a new corresponding plot of:
+```{r}
+pp <- ggplot( Pima.te, aes(x=glu, y=diabetes) ) + geom_point();
+pp <- pp + geom_smooth(formula='y ~ 1+x', se=FALSE,
+                       method='glm',
+                       method.args=list(family = "binomial") );
+# Note that geom_smooth needs an extra list() of arguments to specify the
+# extra arguments that we passed to the glm() function above.
+# In particular, we need to tell the GLM to use a binomial response.
+pp
+```
+We can also make predictions in a similar way to before:
+```{r}
+predict(pima_logistic, type='response', newdata = data.frame(glu=200) )
+```
+And do confidence intervals
+```{r}
+confint(pima_logistic, level=0.95)
+```
+
+### Interpretting Model Coefficients
+The odds of an event happening are p/(1-p)
+- If the probability p equals the sigmoid function with betas and xs in it, then we can derive that the log of the odds of this function become equal to β0+β1x
+
+So, β1 is the is the increase in the log-odds of the response being 1 associated with a unit increase in x
+And, β0 is the associated log-odds of the response being 1 given that x has a value of 0
+
+
+The loss function for logistic regression is the negative log likelihood
+- This means we take the negative log of the likelihood that y equals each possible selection given the betas and xs?? Not sure if we need to know more or need to know how to use it?
+- It does not have a nice closed form solution
+
+
+# Cross Validation and Model Selection
+How do we choose which predictors to use in a model without overdoing it and overfitting the data?
+
+So rather than focusing on how well our model fits our training data, we should be trying to determine how well our model does when it gets applied to data that we haven’t seen before.
+- We can look at the RSS (which we know already) or the MSE (Mean squared error) of our testing data after doing a train/test split
+- We train our model on ONLY the train data and then we test how well it performs on the test data -- this is so we can make sure that the model isn't overfitting as the test data was not a part of what it was trained on
+
+You can plot the RSS or MSE as you increase the polynomial order of a linear model
+
+You can do a 50/50 single split
+
+### Leave out one cross-validation
+Process:
+1) Take one observation and set it aside (i.e., hold it out)
+2) Train our model on the other n−1 observations
+3) Evaluate our model on the held-out observation.
+You can do this and iterate through every single data point being the held-out observation and then average the error across each
+
+```{r}
+data('mtcars')
+nrows <- nrow(mtcars)
+
+residuals_linear = rep(NA, nrows)
+residuals_quadratic = rep(NA, nrows)
+for ( i in 1:nrow(mtcars) ) {
+  train_data <- mtcars[-c(i),]; # Leave out the i-th observation
+  leftout <- mtcars[c(i),]; # the row containing the left-out sample.
+  
+  m1 <- lm(mpg ~ 1 + hp, train_data );
+  m1.pred <- predict( m1, leftout );
+  residuals_linear[i] = (m1.pred - leftout$mpg)^2
+  
+  m2 <- lm(mpg ~ 1 + hp + I(hp^2), train_data );
+  m2.pred <- predict( m2, leftout );
+  residuals_quadratic[i] = (m2.pred - leftout$mpg)^2
+}
+mean(residuals_linear)
+mean(residuals_quadratic)
+```
+
+Single split cross validation
+- Pro: Only have to fit a model once (or just a few times, if we are going to repeat the operation and average)
+- Con: Only have half of the data available to fit the model, which leads to less accurate prediction (and thus high variance in estimated model).
+Leave one out cross validation
+- Pro: Use all but one observation to fit the model, so model fit is almost as good as if we had used all of the data
+- Con: Have to fit the model anew for each held-out data point, results in fitting the model n different times, which can be expensive.
+- Con: Because any two training sets overlap in all but one of their elements, our fitted models are very highly correlated with one another, so we’re doing a lot of work (n model fits) to get a bunch of highly correlated measurements.
+
+How do we bridge the gap between these two? 
+
+### K-fold Cross Validation
+Process: 
+1) Randomly partition the data into K (approximately) same-sized subsets, S1,S2,…,SK [[ such that ∪kSk={1,2,…,n} and Sk∩Sℓ=∅ for all k≠ℓ  ...??? ]] -- randomly select these subsets out of the whole dataset -- don't just do continuous points!!
+2) Train the data on all folds besides one K and then test it on that K
+3) Average the MSE across all K-folds 
+
+```{r}
+K = 5
+
+n <- nrow(mtcars)
+Kfolds <- split( sample(1:n, n ,replace=FALSE), as.factor(1:K));
+
+residuals_linear = rep(NA, K)
+residuals_quadratic = rep(NA, K)
+
+for (k in 1:K) {
+  # For some reason requires double brackets
+  curr_K = Kfolds[[k]]
+  
+  train_data <- mtcars[-curr_K,]; # Everything besides the k-th fold
+  leftout <- mtcars[curr_K,]; # The k-th fold
+  
+  m1 <- lm(mpg ~ 1 + hp, train_data );
+  m1.pred <- predict( m1, leftout );
+  residuals_linear[k] = (m1.pred - leftout$mpg)^2
+  
+  m2 <- lm(mpg ~ 1 + hp + I(hp^2), train_data );
+  m2.pred <- predict( m2, leftout );
+  residuals_quadratic[k] = (m2.pred - leftout$mpg)^2
+}
+
+mean(residuals_linear)
+mean(residuals_quadratic)
+```
+
+### Bias-Variance Decomposition
+In general, there will be many different estimators (i.e., many different choices of θ̂ ) that all obtain (approximately) the same MSE. 
+The above equation means that once we are choosing among these different “similar” estimators (i.e., estimators that have similar MSE), we are really just trading off between bias and variance. 
+- That is, an estimator with smaller bias will have to “pay” for it with more variance. 
+- This is often referred to as the bias-variance tradeoff.
+
+K-fold CV should sit at a kind of “happy medium” level of bias between LOOCV's approximately unbiased and “naive” CV  biased upward.
+LOOCV has high variance and "naive" CV has low variance
+
+### Best subset selection
+It is implemented in R in, for example, the leaps library the function regsubsets, which gets called in more or less the same way as lm.  See (here)[https://cran.r-project.org/web/packages/leaps/index.html] for documentation if you’re interested.
+1) For each k=1,2,…,p, for every set of k different variables, fit a model and keep the model that best fits the data (measured by RSS). Call this model Mk.
+2) Use CV (or some other tool like AIC or adjusted R2, which we’ll discuss below) to select among the models M1,M2,…,Mp.
+
+### Stepwise selection
+Forward Stepwise Selection
+- Start with a “null” model (i.e., no predictors, just an intercept term), then repeatedly add the “best” predictor not already in the model
+- 1) Start by fitting the “null” model, with just an intercept term. Call it M0.
+- 2) For each k=1,2,…,p, among the p−k predictors not already in the model, add the one that yields the biggest improvement in RSS. Call this model, which includes k predictors and the intercept term, Mk.
+- 3) Use CV or some other method (e.g., an information criterion; see ISLR Section 6.1) to choose among M0,M1,M2,…,Mp.
+
+Backward Stepwise Selection
+- We start with the full model (i.e., a model with all p predictors), and iteratively remove one predictor at a time, always removing the predictor that decreases RSS the least.
+- Backward selection will only work if the number of observations n is larger than p. 
+-     If n<p, the “full” model cannot be fit, because we have an overdetermined system of linear equations– n equations in p unknowns, and p>n. 
+-     This is a setting where regularization can help a lot (see below), but the details are best left to your regression course(s).
+
+Hybrid Approaches do Exist
+
+### Ridge Regression and LASSO
+Ridge Regression
+- shrinks these estimated coefficients toward zero by changing the loss slightly. Instead of minimizing the RSS alone, we add a penalty term to RSS:
+- λ∑(from j=1 to p) βj^2 where λ≥0 is a tuning parameter we have to choose --> Punishes you for having a beta with a large magnitude which encourages us to put all of our other not helpful coefficients TOWARDS 0, but not exactly at 0
+
+```{r}
+library(MASS);
+lambda_vals <- c(0,1,2,5,10,20,50,100,200,500);
+ridge_models <- lm.ridge(mpg~., mtcars, lambda=lambda_vals)
+plot(ridge_models)
+```
+
+The LASSO
+- Does the same thing as ridge but instead of adding lamba * the sum of all betas squared you add lambda * the sum of the absolute values of all betas
+- The LASSO penalty encourages coefficients to be set EQUAL TO 0 if they aren’t useful predictors
+
+
+for glmnet() USE ALPHA = 1 for LASSO and USE ALPHA = 0 for Ridge Regression
+```{r}
+library(glmnet)
+y_mtc <- mtcars[,1]; # Grab just the first column
+# ... and the predictors are everything else.
+x_mtc <- mtcars[, -c(1)];
+
+# Remember, alpha=1 for the LASSO.
+mtc_lasso_lambda0 <- glmnet(x_mtc, y_mtc, alpha = 1, lambda=0);
+coef( mtc_lasso_lambda0 )
+
+# Should be approx the same as above since lambda = 0
+mtc_vanilla_lm <- lm( mpg ~ ., mtcars )
+coef(mtc_vanilla_lm)
+```
+
+```{r}
+# Still doing LASSO
+lambda = seq(from = 0.4, to = 3.2, by = 0.4)
+mtc_lasso_lambda1 <- glmnet(x_mtc, y_mtc, alpha = 1, lambda=lambda);
+coef(mtc_lasso_lambda1)
+```
+
+```{r}
+# Doing ridge regression
+lambda = seq(from = 0.4, to = 2.4, by = 0.4)
+mtc_lasso_lambda1 <- glmnet(x_mtc, y_mtc, alpha = 0, lambda=lambda);
+coef(mtc_lasso_lambda1)
+```
+
+
+# Bootstrap
+In the bootstrap, we sample WITH REPLACEMENT from the observed data and compute estimates based on this
+- When we do this, we get a variance of the estimate that is approximately equal to the variance of the true parameter's sampling distribution --> Makes us have accurate confidence intervals
+
+```{r}
+#Bootstrapping for a poisson distribution
+n <- 25;
+lambdatrue <- 5;
+
+data <- rpois(n=n, lambda=5); # Generate a sample of 25 iid RVs
+lambdahat <- mean(data); # Estimate lambda.
+
+B <- 200; # Number of bootstrap replicates.
+replicates <- rep(NA,B); # We'll store
+for( i in 1:B ) {
+  # Sample WITH REPLACEMENT from the data sample itself.
+  resample <- sample(data, n, replace=TRUE);
+  # Compute our statistic on the resample data.
+  # This is a *bootstrap replicate* of our statistic.
+  replicates[i] <- mean(resample);
+}
+```
+
+```{r}
+hist(replicates)
+abline(v=lambdahat, lwd=2, col='red')
+abline(v=lambdatrue, lwd=2, col='blue')
+```
+
+You can now get a confidence interval by either doing the quantile() function or using the standard deviation of the replicates
+```{r}
+sd_lambda <- sd( replicates );
+sd_CI <- c( lambdahat-1.96*sd_lambda, lambdahat+1.96*sd_lambda);
+sd_CI
+
+quantile_CI = quantile(replicates, c(.025, .975))
+quantile_CI
+```
+
+Bootstrap doesn't work for functions like max/min because of their distribution works
+
+# Central Limit Theorem Confidence Intervals
+
+# Simulation Based Confidence Intervals
+
+# Bayes Rule
+
+# Hypothesis Testing
+
+# Monte Carlo
+Use lots of simulations to do law of large numbers in practice
+
+# Density vs Cumulative Distribution Function
+???
+
+# Random Variables
+Bernouli
+Binomial
+Geometric
+Poisson
+--> All of above are discrete while all of below are continuous!! Be careful with the boundaries!!
+Normal
+Uniform
+Exponential
+Multivariate Normal

@@ -1,0 +1,384 @@
+---
+title: "STAT340 Final Exam Practice Problems"
+author: "Keith Levin"
+date: "Fall 2022"
+output: html_document
+---
+
+Below are practice problems to help you prepare for the final exam.
+
+__Note:__ the final exam is *cumulative*, meaning that material covered in Exams 1 and 2 is fair game for questions.
+The practice problems below concern only material covered since Exam 2.
+For practice on earlier materials, refer to your homeworks, discussions and previous exam materials.
+
+## Problem 1: the `rock` data set
+
+The `rock` data set, which comes packaged with `R`, describes 48 rock samples taken at a petroleum reservoir.
+Each sample has four measurements, all related to measuring permeability of the rock (the geological details are not so important, here):
+
+- `area`: the area of the pores (measured in a number of pixels out of a 256-by-256 image that were "pores")
+- `peri`: perimeter of the "pores" part of the sample
+- `shape`: perimeter(`peri`) of the pores part divided by square root of the area (`area`)
+- `perm`: a measurement of permeability (in milli-Darcies, a unit of permeability, naturally)
+
+__Part a: plotting the data__
+
+Suppose that our goal is to predict permeability (`perm`) from other characteristics of the rock.
+
+For each of the three other variables `area`, `peri` and `shape`, fit a linear regression model that predicts `perm` from this variable and an intercept term.
+That is, you should fit three models, each using one of `area`, `peri` and `shape`.
+
+```{r}
+#TODO: replace the NAs below with linear model code
+area_lm <- lm(perm ~ 1 + area, data = rock)
+peri_lm <- lm(perm ~ 1 + peri, data = rock)
+shape_lm <- lm(perm ~ 1 + shape, data = rock)
+```
+
+__Part b: comparing fits__
+
+Compute the RSS for each of the three models fitted in Part a.
+Which is best?
+
+```{r}
+sum(residuals(area_lm)^2)
+sum(residuals(peri_lm)^2)
+sum(residuals(shape_lm)^2)
+```
+
+***
+
+The RSS for the peri model is the lowest and therefore the best
+
+***
+
+__Part c: multiple regression__
+
+Now, fit a model that predicts `perm` from the other three variables (you should not include any interaction terms).
+
+```{r}
+# TODO: replace NA with model-fitting code
+full_lm <- lm(perm ~ 1 + area + peri + shape, data = rock)
+summary(full_lm)
+```
+
+__Part d: interpreting model fits__
+
+Consider the coefficient of `peri` in the model from Part c.
+
+1. Give an interpretation of this estimated coefficient.
+2. Is this coefficient statistically significantly different from zero at the $\alpha=0.01$ level?
+
+***
+
+1) Controlling for area and shape, a unit increase of peri is associated with a change of -0.34402 in perm
+2) This coefficient has a p-value of 2.84e-08 which is statistically signifiacnt from zero at the $\alpha=0.01$ level
+
+***
+
+## Problem 2: Fitting and Interpreting a Linear Regression Model
+
+The `trees` data set in `R` contains measurements of diameter (in inches), height (in feet) and the amount of timber (volume, in cubic feet) in each of 31 trees.
+See `?trees` for additional information.
+
+The code below loads the data set.
+Note that the column of the data set encoding tree diameter is mistakenly labeled `Girth` (girth is technically a measure of circumference, not a diameter).
+
+```{r}
+data(trees)
+head(trees)
+```
+
+__Part a: examining correlations__
+
+It stands to reason that the volume of timber in a tree should scale with both the height of the tree and the diameter.
+However, it also stands to reason that height and diameter are highly correlated.
+Use the `cor` function to compute the pairwise correlations among the three variables.
+
+```{r}
+cor(trees$Girth, trees$Height)
+cor(trees$Height, trees$Volume)
+cor(trees$Volume, trees$Girth)
+```
+
+Suppose that we had to choose either tree diameter (labeled `Girth` in the data) or tree height with which to predict volume.
+Based on these correlations, Which would you choose? Why?
+
+***
+
+Since Volume and Girth are more tightly correlated together than Volume and Height are, we should choose girth to predict volume because it appears to be more dependent on girth than height.
+
+***
+
+__Part b: comparing model fits__
+
+Well, let's put the above to a test.
+Use `lm` to fit two linear regression models from this data set (both should, of course, include intercept terms):
+
+1. Predicting volume from height
+2. Predicting volume from diameter (labeled `Girth` in the data set)
+
+```{r}
+height_lm = lm(Volume ~ 1 + Height, data = trees)
+sum(residuals(height_lm)^2)
+
+girth_lm = lm(Volume ~ 1 + Girth, data = trees)
+sum(residuals(girth_lm)^2)
+```
+
+Compare the sum of squared residuals of these two models.
+Which is better?
+Does this agree with your observations in Part a?
+
+***
+
+Yes. Girth's linear model has a much lower RSS than Height's linear models which means that it's residuals are on average much lower and it therefore models the trend in the data much more accurately
+
+***
+
+Examining the model outputs above (or extracting information again here), what do each of your fitted models conclude about the null hypothesis that the slope is equal to zero?
+
+```{r}
+#TODO: code goes here if you need to extract model information.
+# No need to write anything here if your model outputs above include the necessary information to answer the question.
+summary(height_lm)
+summary(girth_lm)
+```
+
+***
+
+Both have slopes that are statistically significant at an alpha level of .001 and therefore provide sufficient evidence to reject the null hypothesis that the slope is equal to zero. However, in line with the discussion above, girth's slope is more statistically significant than height's slope.
+
+***
+
+__Part c: volume and diameter__
+
+Thinking back to fourth grade geometry with Mrs. Galvin, you remember that the area of a circle grows like the square of the diameter (that is, if we double the diameter, the area of the circle quadruples).
+It follows that timber volume, which is basically the volume of a cylinder, should scale linearly with the square of the diameter.
+
+Create a scatter plot of volume as a function of diameter.
+Does the "geometric" intuition sketched above agree with what you see in the plot?
+Why or why not?
+
+```{r}
+library(ggplot2)
+ggplot(data = trees, mapping = aes(x = Girth, y = Volume)) + geom_point()
+```
+
+***
+
+There generally appears to be a quadratic trend that curve up in the scatterplot which makes onto the geometric intuition sketched above, however, it is not very clear and it could also very easily be judged to be a linear trend.
+
+***
+
+__Part d: incorporating non-linearities__
+
+Fit a linear regression model predicting volume from the squared diameter (and an intercept term, of course).
+Compute the residual sum of squares of this model.
+
+```{r}
+girth_squared_lm = lm(Volume ~ 1 + I(Girth^2), data = trees)
+sum(residuals(girth_squared_lm)^2)
+```
+
+Compare the RSS of this model with that obtained in Part b using the linear diameter.
+Which is better, the quadratic model or the linear model?
+Does this surprise you? Why or why not?
+If you are surprised, what might explain the observation?
+
+***
+
+The RSS of this quadratic model is lower than the RSS of the linear model. This does not surprise me because of 1) the geometric intuition outlines above which is an accurate description of volume that I've known for years and 2) the scatterplot definitely does look like it has some quadratic tendencies. The RSSs are not too far apart either which makes sense considering how I previously thought the scatterplot might still be a linear trend we were looking at
+
+***
+
+## Problem 3: the bootstrap
+
+A researcher is studying salamanders in western Massachusetts, and wishes to estimate the average length, measured in centimeters, of adult female salamanders living in wetlands there.
+She and her team collect an independent sample of 36 salamanders, measuring each one (in centimeters) from head to tail and recording the measurement.
+The data is reproduced below.
+
+```{r}
+salamander_lengths <- c( 14.5, 13.9, 14.1, 14.2, 14.7, 13.8, 14.6, 16.0, 14.7,
+                         14.8, 15.1, 14.6, 14.4, 13.7, 12.1, 14.8, 11.0, 12.0,
+                         13.8, 14.3, 13.9, 13.4, 14.6, 14.5, 15.6, 15.2, 16.1,
+                         15.2, 13.8, 16.6, 13.6, 15.4, 12.5, 12.8, 14.1, 15.2);
+```
+
+Use the bootstrap to construct a 95% confidence interval for the population mean height. You should use at least 200 bootstrap replicates.
+
+```{r}
+n <- length(salamander_lengths);
+
+x_bar = mean(salamander_lengths)
+
+B <- 400; # Number of bootstrap replicates.
+replicates <- rep(NA,B); # We'll store
+for( i in 1:B ) {
+  # Sample WITH REPLACEMENT from the data sample itself.
+  resample <- sample(salamander_lengths, n, replace=TRUE);
+  # Compute our statistic on the resample data.
+  # This is a *bootstrap replicate* of our statistic.
+  replicates[i] <- mean(resample);
+}
+
+quantile_CI = unname(quantile(replicates, c(.025, .975)))
+quantile_CI
+
+sd_mean <- sd( replicates );
+sd_CI <- c( x_bar-1.96*sd_mean, x_bar+1.96*sd_mean);
+sd_CI
+```
+
+## Problem 4: logistic regression
+
+Let's revisit our dear old friend the `mtcars` data set once more.
+The `am` column of this data frame indicates whether a particular model of car has an automatic (`0`) or manual (`1`) transmission.
+This problem will consider how to go about predicting this trait based on the other available variables.
+
+__Part a: fitting logistic regression__ 
+
+Fit a logistic regression model to predict `am` based on the read axle ratio (`drat`) and an intercept term.
+
+```{r}
+mtcars_logistic <- glm( am ~ 1 + drat, data=mtcars, family="binomial");
+summary(mtcars_logistic)
+```
+
+__Part b: interpreting logistic regression__
+
+Looking at your fitted model from Part a, is the estimated coefficient for `drat` statistically significantly different from zero?
+
+Give a 95% confidence interval for the fitted coefficient. --- WHAT DOES THIS MEAN???
+
+Give an interpretation of what this coefficient means.
+
+Does an increase in `drat` tend to result in a higher or lower probability of a car having a manual transmission?
+
+```{r}
+confint(mtcars_logistic, level = .95)
+```
+
+***
+
+1) The estimated coefficient for drat has a p-value of .00685 which is statistically significant from 0 at an alpha level of .01
+2) A 95% confidence interval for the fitted coefficient can be seen above
+3) This fitted coefficient means that a unit increase of drat is associated with an increase in the log-odds of the am being 1 of 5.577
+4) Since the fitted coefficient described in (3) is positive, this means that an icnerase in drat tends to result in a higher probability of a manual transmission
+
+***
+
+__Part c: model comparison with LOOCV__
+
+Now, suppose we are considering adding another variable to our model from Part a.
+As discussed in lecture and your readings, adding additional variables to a model will always increase our performance when measured on the training data, so to make a fair comparison between this new model and the model from Part a, we need to compare their performances on data *not* seen in the training procedure.
+
+Use leave-one-out cross validation (LOOCV) to compare the performance of your model from Part a against a model that predicts `am` from `drat` and `mpg` (and an intercept term).
+
+__Note:__ in our discussion of LOOCV, we mostly discussed linear regression, where the natural way to assess a model's performance was its squared error in predicting the held-out observations.
+In logistic regression, squared error is not such a natural choice.
+For this problem, you should *fit* the model using the standard maximum likelihood approach as implemented in `glm`, but you should *assess* the model's performance on held-out data by making a prediction with the model (i.e., predicting `0` or `1`), and then checking whether or not this prediction matches the true value of `am` in the held-out observation.
+Recall that our trained logistic regression model outputs a probability based on the given predictor(s).
+You should turn this probability into a prediction by rounding the probability to 0 or 1 (you may break a tie at probability $0.5$ as you see fit).
+
+```{r}
+nrows <- nrow(mtcars)
+
+residuals_drat = rep(NA, nrows)
+residuals_drat_mpg = rep(NA, nrows)
+
+for ( i in 1:nrow(mtcars) ) {
+  train_data <- mtcars[-c(i),]; # Everything besides the i-th data point
+  leftout <- mtcars[c(i),]; # Just the i-th data point
+  
+  mtcars_logistic1 <- glm( am ~ 1 + drat, data=train_data, family="binomial");
+  mtcars_logistic1 <- predict( mtcars_logistic1, leftout );
+  residuals_drat[i] = (mtcars_logistic1 - leftout$am)^2
+  
+  mtcars_logistic2 = glm( am ~ 1 + drat + mpg, data=train_data, family="binomial");
+  mtcars_logistic2 <- predict( mtcars_logistic2, leftout );
+  residuals_drat_mpg[i] = (mtcars_logistic2 - leftout$am)^2
+}
+mean(residuals_drat)
+mean(residuals_drat_mpg)
+```
+
+Which model is better according to your implementation of leave-one-out cross validation?
+
+Which model should we choose to make future predictions? Defend your choice.
+
+***
+
+According to my implementation of leave-one-out cross validation, the model just using drat to predict am has a lower RSS than the model using drat and mpg and therefore is better. This means that we should use this model to make future predictions because it is both more accurate and less likely to overfit the train data as it performs better on the test data than the other model
+
+***
+
+__Bonus practice:__ repeat the above using $5$-fold cross validation. 
+
+```{r}
+K = 5
+
+n <- nrow(mtcars)
+Kfolds <- split( sample(1:n, n ,replace=FALSE), as.factor(1:K));
+
+residuals_drat = rep(NA, K)
+residuals_drat_mpg = rep(NA, K)
+
+for (k in 1:K) {
+  # For some reason requires double brackets
+  curr_K = Kfolds[[k]]
+  
+  train_data <- mtcars[-curr_K,]; # Everything besides the k-th fold
+  leftout <- mtcars[curr_K,]; # The k-th fold
+  
+  mtcars_logistic1 <- glm( am ~ 1 + drat, data=train_data, family="binomial");
+  mtcars_logistic1 <- predict( mtcars_logistic1, leftout );
+  residuals_drat[k] = (mtcars_logistic1 - leftout$am)^2
+  
+  mtcars_logistic2 = glm( am ~ 1 + drat + mpg, data=train_data, family="binomial");
+  mtcars_logistic2 <- predict( mtcars_logistic2, leftout );
+  residuals_drat_mpg[k] = (mtcars_logistic2 - leftout$am)^2
+}
+
+mean(residuals_drat)
+mean(residuals_drat_mpg)
+```
+
+***
+K-fold cross validation with a K of 5 returns the same answer as above
+***
+
+## Problem 5: Voting behavior
+
+__Note:__ this problem is adapted from a previous year's exam, and is quite open-ended in the analysis that it asks you to perform.
+Questions on this year's final will not be nearly so open-ended, but this problem is nonetheless a good opportunity to practice data cleaning, model fitting and model selection.
+
+The `2008-16_election.csv` file (available on canvas) contains county level data for the 2008, 2012, and 2016 presidential elections ^[See [here](https://github.com/tonmcg/US_County_Level_Election_Results_08-20) for background, if you are interested], and the `county_complete.csv` file (also on canvas) contains a **large** collection of various statistics for each county taken from a variety of surveys, censuses, and studies across several years ^[see [https://www.openintro.org/data/index.php?data=county_complete](here) for background].
+
+Using everything you've learned so far, build the best model you can to explain county-level voting behavior in the 2016 election.
+
+Once you download the files from canvas, you should be able to uncomment and run the following code without errors:
+```{r, message=F,warning=F}
+#election = read_csv("2008-16_election.csv")
+#head(election,10)
+
+#county = read_csv("county_complete.csv")
+#head(election,10)
+```
+
+__Notes:__
+
+ - This is designed to be a **very** open ended problem. You can make your final model as simple or as complex as you want. There is no "correct" answer. You will be graded first and foremost on the clarity and cohesiveness of your interpretation and presentation. All else being equal, a more ambitious approach may receive slightly higher credit, but focus on  clarity.
+ - You may choose to predict either just the final binary outcome result (i.e. republican, or democrat) *or* how strongly the county preferred one party to the other (i.e. percentage of votes for one party, or difference in percentages, or some other metric).
+ - The data provided here is in a very raw format. Check the data before using it.
+ - You are NOT allowed to look for other datasets to use. Use only the data provided in these two csv files.
+ - You do **not** have to use every column of the data. Explore the predictors available and choose a subset you think are the most interesting/relevant.
+ - You may find it useful to transform certain predictors before using them, or even create new columns using several other predictors. Just as an example, one thing you can do is use the population estimates in `pop2011`, `pop2012`, ..., `pop2016` to calculate average annual population growth in each county, which might be a more useful predictor than just using population in a certain year (this is an arbitrary example, NOT a suggestion to do this specifically).
+ - You are NOT required to know or expected to use any methods not covered by this exam (e.g. model selection, regularization, cross-validation, etc.) but you are allowed to use them if you feel comfortable with them and really want to try to improve your model further.
+ - You can use the [FIPS codes](https://en.wikipedia.org/wiki/FIPS_county_code) in each file to easily combine the two datasets (this code is unique for each county).
+
+***
+
+TODO: work goes here
+
+***

@@ -1,0 +1,263 @@
+
+---
+title: "STAT340 HW04: Testing II"
+author: "Ben Hayum"
+date: "October 10th 2022"
+output: html_document
+---
+
+***
+
+Didn't work with any other students
+
+***
+
+## Instructions
+
+Update the "author" and "date" fields in the header and
+complete the exercises below.
+Knit the document, and submit **both the HTML and RMD** files to Canvas.
+
+__Due date:__ October 13, 2022 at 11:59pm.
+
+---
+
+## 1) Constructing a Rejection Region
+
+This problem will give you some practice thinking about hypothesis testing and choosing rejection thresholds.
+Let's suppose we're running a statistical test with a test statistic $T$.
+
+a) Suppose that under our null hypothesis, $T$ has an exponential distribution with rate parameter $\lambda = 1$, in which larger values of $T$ correspond to more "unusual" data.
+Use R to compute the rejection threshold such that our test has level $\alpha = 0.05$.
+
+```{r}
+qexp(.95, rate= 1)
+```
+
+b) Suppose that we are continuing to use the same test statistic $T$ above, so that $T$ is distributed as a rate=$1$ exponential and larger values of $T$ correspond to more "unusual" observations, but now we want to conduct our test at level $\alpha=0.01$.
+Use R to compute a rejection threshold for this test.
+How does this rejection threshold compare with the one computed in part (a)?
+Does this surprise you? Why or why not?
+ 
+```{r}
+qexp(.99, rate = 1)
+```
+
+***
+
+The rejection threshold with alpha = .01 is larger/more extreme than alpha = .05. This is not surprising as the decrease in alpha means that the corresponding threshold would have to be a number that is less likely to occur. And, a number that is more extreme is less likely to occur in the exponential distribution.
+
+***
+
+c) Suppose now that we use a different test statistic $T'$, which has a central $t$-distribution with $12$ degrees of freedom under the null hypothesis, in which larger values of $T'$ correspond to more "unusual" outcomes.
+Use R to determine a rejection threshold for this test statistic so that our test has level $\alpha=0.05$.
+__Hint:__ see `?qt` for information on quantiles of the t-distribution. A central t-distribution is obtained by setting the `ncp` parameter equal to zero (this is the default behavior, so you can just leave this parameter unspecified). The degrees of freedom are controlled by the `df` parameter.
+
+```{r}
+qt(.95, df = 12, ncp = 0)
+```
+
+
+## 2) Short answers: p-values and testing
+
+Answer each of the following short-answer prompts.
+Two or three sentences for each is plenty.
+
+a) A common misconception by beginner statisticians is that a p-value represents the probability that the null hypothesis is true. Explain briefly why this understanding is incorrect.
+Specifically, how is the correct definition of a p-value as discussed in your readings and in lecture, different from this incorrect understanding?
+
+***
+
+The p-value is the probability that the observed test statistic would occur if the null hypothesis were true. This is different from the probability that the null hypothesis itself is true. One observed test statistic cannot tell you this probability by itself.
+
+***
+
+b) Alice and Bob are both conducting a one-sided test of the same null hypothesis $H_0$, using a test statistic $T$, in which larger values of $T$ correspond to more unusual or extreme observations.
+That is, Alice and Bob both will reject $H_0$ for suitably large values of $T$.
+However, Alice and Bob specify different levels for their tests.
+Alice and Bob both see $T$ computed on the same data.
+Alice rejects $H_0$ in light of this data while Bob chooses not to reject $H_0$.
+What can we conclude about Alice's $\alpha$-level compared to Bob's?
+Why?
+
+***
+
+Alice's alpha level must have been higher than Bob's. It must have been a case similar to the following: Alice's alpha level is at .05 while Bob's alpha level is at .01 and the p-value ended up being .03. In this scneario, the p-value is significant enough for Alice to reject the null hypothesis but not for Bob. If Alice's alpha level were lower than Bob's, there would be no scenario where she rejects the null hypothesis but Bob doesn't.
+
+***
+
+c) By definition, decreasing the level of a test (i.e., decreasing $\alpha$) decreases the probability of a Type I error (i.e., mistakenly rejecting the null when the null is true). We said in lecture that generally speaking, decreasing $\alpha$ will also *increase* the probability of a Type II error.
+Why should this be true?
+
+__Note:__ this is a tricky question! Generally speaking, if $\alpha$ is smaller, then we need to see more extreme values of our test statistic in order to reject the null hypothesis. Now, if we require more extreme values of our test statistic to reject the null hypothesis, what happens to our willingness/ability to reject the null hypothesis when it is *not* true?
+
+***
+
+If you decrease alpha, you decrease the chances of a Type I Error occurring where you reject the null despite the null being true. Doing this therefore increases the odds that you accept the null. When the odds are accepting the null are higher, you are more likely to make a Type II error where you accept the null despite it being false.
+
+***
+
+## 3) Testing coin flips
+
+Of the six sequences below, **only one** of them is actually randomly generated from a fair coin (i.e., one in which $\Pr[\text{heads}]=\Pr[\text{tails}]$ and coinflips are independent from one toss to the next). Use a combination of everything you know (common sense, Monte Carlo, hypothesis testing, etc.) to identify which is actually random, and explain your reasoning.
+__Note:__ there are no strictly right or wrong answers here (though of course there are better and worse answers). Just make sure that your reasoning is sound and clearly explained.
+
+If you are up for an additional challenge (__optional__-- not worth any points), try to associate probabilities (e.g., p-values) to your claim(s).
+
+```{r}
+flips1 <- "HTHTHTHTHTHTHTHTHTHTHTHTHTHTHTHTHHTHTHTHTHTHTHTTHTHTHTHTHTHTHHTHTHTHTHTHTHTHTHTHTHTHTHTHTHHTTHTHTHTHTHTHTHTHTHTHTHTHTHHTHTHTHTHTHTHTHTHTHTHTHTTHTHTHTHTHTHTHTHTHTHTHTHTHHTHTHTHTHTHTHTHTHTHTHTHHTHTHTHTH"
+
+flips2 <- "HHHTHTTTHHTHHTHHHTTTTHTHTHHTTHTHHHTHHTHTTTHTHHHTHTTTHTHTHHTHTHTTHTHHTHTHTTTHTHHHTHTHTTHTHTHHTHTHTHHHTHTTTHTHHTHTHTHHTTTHTHHTHHTTTTHTHTHHHTHTTHTHHTHTHTTHTHHTHTHHHTHHHTHTTTHTTHTTTHTHHHTHTHTTHTHHTHHTHTTT"
+
+flips3 <- "HHTHTHTTTHTHHHTHHTTTHTHHTHTTTHTHTHHTHTHTTHTHHHHHHTTTHTHTHHTHTTTHTHHTHTHTTTHTHHHTTHTTTHTHTHHHHTHTTHHTTTTTHTHHHTHTHTTTTTHHHTHHTHHTHHHTTTTHTHTHHHTHHTTTTTHTHHHTHTHTHTTTHTHHHTHTHTHTTHTHHTHTHTHTTTTHTHHHTHTH"
+
+flips4 <- "HTHHHHHHHTHTTHHTTHHHTHTHTTTHHTHHHTHHTTHTTTTTTTTTHTHHTTTTTHTHTHTHHTTHTTHTTTTTHHHTHTTTHTHTHHHTHTTTTHTHTHHTTHTHTTHHTHTHHHHTHTTHHTTHTTHTTHTHHHHHHTTTTTTHHHTTHTHHHHTTTHTTHHHTTHTHHTTTHHTHHTTTHTHHTHHHTHHTTHHH"
+
+flips5 <- "HHHHHHHHHHHTTTTTTTTTTTHHHHHHHHHHHHTTTTTTTTTTTHHHHHHHHHHHHHTTTTTTTTTTHHHHHHHHHHTTTTTTTTHHHHHHHHTTTTTTTHHHHHHHHHTTTTTTTTTHHHHHHHHTTTHHHHHHHHHHHTTTTTTTTTTTHHHHHHHHHHHHTTTTTTTTTTTHHHHHHHHHHHHHTTTTTTTTTTHH"
+
+flips6 <- "TTHTTTHTTTTTTTHTHTHTHTTHTTHTHHTHHTTTHHTHTTTHTHHTHHHTHTTHHTHHTTHTHTTTTHTHTTTHHTTTTTTTTHTHHTTHTTTTTTHTHTHTHTTTHTTHHTTHTTTHHTTTHTTHTTTTHTTTTHHTTTHTHTHHHTTTTTTHTHHTTTTTTTTTTTTHHHTTTHHHTTTHTTTHTHTTHTTTTTHT"
+
+# you can use the function below to split the above strings into vectors of flips
+split <- function(str) {
+  return(strsplit(str, split = "")[[1]])
+}
+# Example: split the first sequence into a vector of characters.
+split(flips1)
+```
+
+```{r}
+p = 0.5
+n = length(split(flips1))
+sd = sqrt((p*(1-p))/n)
+# The null normal distribution has a mean of 0.5 and sd of .035355 (given the shared n of 200 across all sets of flips)
+
+p_hat1 = sum(split(flips1)=="H")/n
+z_score1 = abs((p_hat1 - p)/sd)
+p_value1 = pnorm(-z_score1) + (1 - pnorm(z_score1))
+p_value1
+
+p_hat2 = sum(split(flips2)=="H")/n
+z_score2 = abs((p_hat2 - p)/sd)
+p_value2 = pnorm(-z_score2) + (1 - pnorm(z_score2))
+p_value2
+
+p_hat3 = sum(split(flips3)=="H")/n
+z_score3 = abs((p_hat3 - p)/sd)
+p_value3 = pnorm(-z_score3) + (1 - pnorm(z_score3))
+p_value3
+
+p_hat4 = sum(split(flips4)=="H")/n
+z_score4 = abs((p_hat4 - p)/sd)
+p_value4 = pnorm(-z_score4) + (1 - pnorm(z_score4))
+p_value4
+
+p_hat5 = sum(split(flips5)=="H")/n
+z_score5 = abs((p_hat5 - p)/sd)
+p_value5 = pnorm(-z_score5) + (1 - pnorm(z_score5))
+p_value5
+
+p_hat6 = sum(split(flips6)=="H")/n
+z_score6 = abs((p_hat6 - p)/sd)
+p_value6 = pnorm(-z_score6) + (1 - pnorm(z_score6))
+p_value6
+```
+***
+
+Using information I learned from past statistics classes, I modeled the null distribution as a normal distribution with mean of mu = p = 0.5 and sd = sqrt(p(1-p)/n) = .035355. Since np = 100 > 15, this is a fair assumption to make. After setting this up, I calculated the proportion of heads and then corresponding z-score test statistics for all set of flips. Then, using these p-hat values, I performed a two-tailed test to find the p-values. The set of flips with the highest p-value which is most likely to have resulted from the null distribution of equal heads and equal tails flips ended up being flips3 with a p-value of 1. Given the p-value, and a general scan of the flips data (where some like flips5 have unrealistic streaks of too many Hs and Ts and flips1 have perfectly switching H and T one after another), it seems like flips3 has the highest likelihood of being produced from actual coin flips. A close 2nd/3rd place would be flips4 and flips2 which both have a high p-value and a plausible looking set of Hs and Ts.
+
+***
+
+
+
+
+
+
+
+
+
+
+# 10/25/2022 -- Class Example learning monte carlo to get confidence intervals
+## Example 1 with poisson distribution
+```{r}
+B = 100000
+n = 30
+alpha = .05
+
+X_vals = rpois(n = n, lambda = 7)
+lambda_hat = mean(X_vals)
+lambda_hat
+
+lambda_star = rep(NA, B)
+for (j in 1:B) {
+  data_star = rpois(n = n, lambda = lambda_hat)
+  lambda_star[j] = mean(data_star)
+}
+
+hist(lambda_star)
+
+lowerBound = alpha/2
+upperBound = 1-(alpha/2)
+
+quantile(lambda_star, probs = c(lowerBound, upperBound))
+```
+If you do this WHOLE THING many many times, on average you should expect the true value to be within 1-alpha of them!!!!
+
+## Example 2 with exponential distribution
+We have X1 - Xn from an Exp(lambda)
+n = 150
+lambda = 3
+E(exp) = 1/lambda
+
+Point estimator for lambda then a confidence interval for lambda
+```{r}
+NMC = 1000
+check_parameter_within = rep(NA, NMC)
+for (i in 1:NMC) {
+  n = 150
+  lambda = 3
+  B = 1000
+  alpha = .05
+  
+  lambda_values = rexp(n = n, rate = lambda)
+  lambda_hat = 1/mean(lambda_values)
+  
+  lambda_star = rep(NA, B)
+  for (j in 1:B) {
+    data_star = rexp(n = n, rate = lambda_hat)
+    lambda_star[j] = 1/mean(data_star)
+  }
+  
+  lowerBound = alpha/2
+  upperBound = 1-(alpha/2)
+  
+  output = quantile(lambda_star, probs = c(lowerBound, upperBound))
+  
+  if (3 > output[1] && 3 < output[2] ) {
+    check_parameter_within[i] = TRUE
+  } else {
+    check_parameter_within[i] = FALSE
+  }
+  
+}
+
+sum(check_parameter_within)/NMC
+```
+
+The parameter is indeed within about 95% of the confidence intervals using this method!!
+
+
+
+
+# 10/27/2022 Example 1
+## Central Limit Theorem
+```{r}
+n = 10000
+sample_means = rep(NA, n)
+for (i in 1:n) {
+  sample_means[i] = mean(rgeom(100, prob = .15))
+}
+
+hist(sample_means)
+```
+
+

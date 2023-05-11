@@ -1,0 +1,318 @@
+---
+title: "STAT340 Exam 2 Practice Problems"
+author: "Keith Levin"
+date: "Fall 2022"
+output: html_document
+---
+
+## Problem 1: Estimating the success parameter of a Bernoulli
+
+The following code downloads a CSV file called `binary.csv` and reads it into a data frame `data` with one column, `X`, which is a vector of binary observations (i.e., every entry is zero or one).
+```{r}
+
+download.file(destfile='binary.csv', url='https://pages.stat.wisc.edu/~kdlevin/teaching/Fall2021/STAT340/Exam2/binary_data.csv')
+data <- read.csv('binary.csv' )
+head(data)
+```
+
+Let us suppose that these observations were drawn iid from a Bernoulli distribution with unknown success probability $p$, and we are interested in estimating $p$.
+
+__Part a__
+
+Use Monte Carlo to construct a 90% (__note:__ 90%, not 95%) confidence interval for the parameter $p$.
+
+```{r}
+phat = mean(data$X)
+n = length(data$X)
+B = 100
+p_star_array = rep(NA, B)
+for (i in 1:B) {
+  data_star = rbinom(n = n, size = 1, prob = phat)
+  p_star_array[i] = mean(data_star)
+}
+
+alpha = .1
+lowerBound = alpha/2
+upperBound = 1 - (alpha/2)
+
+unname(quantile(p_star_array, c(lowerBound, upperBound)))
+```
+
+__Part b__
+
+Now, use the same method to construct a 95% confidence interval for $p$.
+```{r}
+phat = mean(data$X)
+n = length(data$X)
+B = 100
+p_star_array = rep(NA, B)
+for (i in 1:B) {
+  data_star = rbinom(n = n, size = 1, prob = phat)
+  p_star_array[i] = mean(data_star)
+}
+
+alpha = .05
+lowerBound = alpha/2
+upperBound = 1 - (alpha/2)
+
+unname(quantile(p_star_array, c(lowerBound, upperBound)))
+```
+
+Is this CI wider or narrower than the one in Part a?
+Is this what you would expect?
+Why or why not?
+
+***
+
+This confidence interval is wider than the one in Part a. This is what we would expect as in order to become more confident, you have to widen the range so that the true Bernoulli probability has more possible values it could take and therefore has a higher probability of being in the interval.
+
+***
+
+__Part c__
+
+Now, using the same data, construct a 95% (__note:__ 95% now, like in part b, *not* 90%) CLT-based confidence interval for $p$.
+```{r}
+phat = mean(data$X)
+var2hat = var(data$X)
+n = length(data$X)
+
+alpha = .05
+zstar = abs(qnorm(alpha/2))
+
+lowerBound = phat - zstar*sqrt(var2hat/n)
+upperBound = phat + zstar*sqrt(var2hat/n)
+
+CI = c(lowerBound, upperBound)
+CI
+```
+
+__Part d__
+
+We said in lecture that in general, these two approaches should yield fairly similar results.
+Is that the case here?
+Compare the two confidence intervals (e.g., which one is narrower, if any).
+A sentence or two is fine.
+
+***
+
+Yes, the two confidence intervals yielded fairly similar results. The simulation CI being around [.23, .56] and the CLT CI being around [.19, .54]. The CLT confidence interval was wider than the simulation confidence interval and had a lower point estimate.
+
+***
+
+## Problem 2: Testing the effectiveness of a drug
+
+A doctor is testing a new drug for treating disease X.
+The doctor assigns a group of 60 patients with disease X randomly to two different groups: treatment and control.
+The treatment group is given the experiment drug.
+The control group is given a placebo.
+A month later, the doctor records whether or not each person in the study still has disease X, and records the result as a 1 if the patient is still sick, and a 0 otherwise.
+
+The following code downloads the data from this (obviously fictional) experiment and stores it in a data frame `diseaseX`.
+Each row of this data frame corresponds to a patient in the study.
+The data frame has two columns: `Group` encodes whether each patient was assigned to the treatment (`T`) or control (`C`) group.
+`Disease` captures whether or not a patient had disease X at the end of the experiment (`1` for sick, `0` for cured).
+
+```{r}
+download.file(destfile='diseaseX.csv', url='https://pages.stat.wisc.edu/~kdlevin/teaching/Fall2021/STAT340/Exam2/diseaseX_data.csv')
+diseaseX <- read.csv('diseaseX.csv' )
+head(diseaseX)
+library(tidyverse)
+```
+
+__Part a__
+
+Using everything you know, test the hypothesis that the doctor's experimental treatment has no effect on disease status at the 95% level under the assumption that the data are modeled as independent Bernoulli-distributed observations.
+
+```{r}
+treatment = diseaseX %>% filter(Group == "T") %>% select(Disease)
+treatment = treatment$Disease
+control = diseaseX %>% filter(Group == "C") %>% select(Disease)
+control = control$Disease
+
+test_stat = function(treatment, control) {
+  return(mean(treatment) - mean(control))
+}
+
+observed_test_stat = test_stat(treatment, control)
+observed_test_stat
+
+permute_and_get_one_null_test_stat = function(treatment, control) {
+  pooled_data = c(treatment, control)
+  n_control = length(control)
+  n_treatment = length(treatment)
+
+  shuffled_data = sample(pooled_data, size=(n_control+n_treatment), replace=FALSE)
+  shuffled_control = shuffled_data[1:n_control]
+  shuffled_treatment = shuffled_data[(n_control+1):(n_control+n_treatment)]
+  
+  return(test_stat(shuffled_treatment, shuffled_control))
+}
+
+NMC = 1000
+null_test_stats = rep(NA, NMC)
+for (i in 1:NMC) {
+  null_test_stats[i] = permute_and_get_one_null_test_stat(treatment, control)
+}
+
+p_value = sum(null_test_stats <= observed_test_stat)/NMC
+p_value
+```
+
+__Part b__
+
+Suppose that we model the patients in the control group as being diseased with probability $p_C$ and, similarly, a treatment patient is diseased with probability $p_T$.
+That is, we model the `Disease` entries in the data frame `diseaseX` above as being independent Bernoullis with success probability $p_C$ for the control patients and $p_T$ for the treatment patients.
+
+Let's define the *strength* $\delta$ of the treatment to be the difference between these two different probabilities:
+$$
+\delta = p_T - p_C.
+$$
+Using everything you know, construct a 95% confidence interval for $\delta$.
+
+__Hint:__ we recommend using simulation-based inference (of course, a CLT-based CI is also possible, if you prefer): what would you do if you had access to a machine that generated more data for you? Estimate $p_T$ and $p_C$, pretend they are the truth, and do whatever it is you would do if you had that machine.
+
+```{r}
+phat_T = mean(treatment)
+phat_C = mean(control)
+n_T = length(treatment)
+n_C = length(control)
+
+B = 100
+delta_array = rep(NA, B)
+for (i in 1:B) {
+  data_T_star = rbinom(n = n_T, size = 1, prob = phat_T)
+  data_C_star = rbinom(n = n_C, size = 1, prob = phat_C)
+  delta_array[i] = mean(data_T_star) - mean(data_C_star)
+}
+
+alpha = .05
+lowerBound = alpha/2
+upperBound = 1 - (alpha/2)
+
+unname(quantile(delta_array, c(lowerBound, upperBound)))
+```
+
+## Problem 3: Constructing a confidence interval
+
+Load the `cats` data, which includes sex (`Sex`, coded as `M` or `F`), body weight (`Bwt`, in kilograms) and heart weight (`Hwt`, in grams).
+
+```{r}
+library(MASS)
+head(cats)
+```
+
+Consider the ratio $R$ formed by dividing cat cat's heart weight by the body weight, and let $\rho$ denote the population mean of this quantity.
+
+### Part a) Constructing a CLT-based CI
+
+Using the `cats` data set, construct a CLT-based $95\%$ confidence interval for the mean heart weight to body weight ratio $\rho$.
+
+```{r}
+Hwt = cats$Hwt
+Bwt = cats$Bwt
+ratios = Hwt/Bwt
+
+xbar = mean(ratios)
+n = length(ratios)
+var2hat = var(ratios)
+
+alpha = .05
+zstar = abs(qnorm(alpha/2))
+
+lowerBound = xbar - zstar*sqrt(var2hat/n)
+upperBound = xbar + zstar*sqrt(var2hat/n)
+c(lowerBound, upperBound)
+```
+
+What is the lower limit of this CI? The upper limit?
+
+***
+
+The lower limit is 3.815359. The upper limit is 3.987164.
+
+***
+
+### Part b) Constructing a simulation-based CI
+
+Under the assumption that $R$ is normally distributed about its mean $\rho$ with an unknown variance $\sigma^2$, use the `cats` data set to construct a simulation-based $95\%$ confidence interval for the mean heart weight to body weight ratio $\rho$.
+Your simulation should use at least 10,000 Monte Carlo iterates.
+
+__Hint:__ use the data to estimate $\sigma^2$, then proceed with the simulation-based CLT "recipe" that we used in lecture and discussion section.
+
+```{r}
+xbar = mean(ratios)
+var2hat = var(ratios)
+n = length(ratios)
+B = 100
+var_star_array = rep(NA, B)
+for (i in 1:B) {
+  data_star = rnorm(n = n, mean = xbar, sd = sqrt(var2hat))
+  var_star_array[i] = var(data_star)
+}
+
+alpha = .05
+lowerBound = alpha/2
+upperBound = 1 - (alpha/2)
+
+unname(quantile(var_star_array, c(lowerBound, upperBound)))
+```
+
+## Problem 4: Conditional Probability
+
+In the `mtcars` data set, there are two columns corresponding to the engine shape (`vs`; coded as $0$ for V-shape cylinder configuation, $1$ for "straight" cylinder configuration) and the transmission type (`am`; coded as $0$ for automatic and $1$ for manual).
+
+Assuming that the rows of the `mtcars` data set are an independent sample from a population (a questionable assumption, but let's suspend our disbelief for now), estimate the following probabilities:
+
+```{r}
+#View(mtcars)
+vs = mtcars$vs
+am = mtcars$am
+
+n = length(am)
+```
+
+1. The probability that a random car is a manual with a V-shaped engine.
+
+```{r}
+counter = 0
+for (i in 1:n) {
+  if (vs[i] == 0 && am[i] == 1) {
+    counter = counter + 1
+  }
+}
+counter/n
+```
+
+2. The probability that a random car has a V-shaped engine *given* that it is a manual transmission
+
+```{r}
+manual_counter = 0
+v_manual_counter = 0
+for (i in 1:n) {
+  if (am[i] == 1) {
+    manual_counter = manual_counter + 1
+    if (vs[i] == 0) {
+      v_manual_counter = v_manual_counter + 1
+    }
+  }
+}
+
+v_manual_counter/manual_counter
+```
+
+3. The probability that a random car has a manual transmission *given* that it has a V-shaped engine.
+
+```{r}
+v_counter = 0
+manual_v_counter = 0
+for (i in 1:n) {
+  if (vs[i] == 0) {
+    v_counter = v_counter + 1
+    if (am[i] == 1) {
+      manual_v_counter = manual_v_counter + 1
+    }
+  }
+}
+
+manual_v_counter/v_counter
+```
